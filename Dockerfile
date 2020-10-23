@@ -19,4 +19,4 @@ FROM alpine
 COPY --from=builder /src/node-liveness-probe /usr/bin/node-liveness-probe
 
 EXPOSE 49944
-CMD [ "/usr/bin/node-liveness-probe" ]
+ENTRYPOINT [ "/usr/bin/node-liveness-probe" ]
