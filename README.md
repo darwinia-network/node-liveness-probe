@@ -1,5 +1,8 @@
 # Darwinia Node Liveness Probe
 
+![](https://img.shields.io/github/workflow/status/darwinia-network/node-liveness-probe/Production)
+![](https://img.shields.io/github/v/release/darwinia-network/node-liveness-probe)
+
 The node liveness probe is a sidecar container that exposes an HTTP `/healthz` endpoint, which serves as kubelet's livenessProbe hook to monitor health of a Darwinia node.
 
 ## Releases
