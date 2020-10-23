@@ -14,8 +14,10 @@ import (
 )
 
 var opts struct {
-	Listen         string `short:"l" long:"listen" description:"Listen address" value-name:"[ADDR]:PORT" default:":49944"`
-	NodeWsEndpoint string `short:"e" long:"endpoint" description:"Node websocket endpoint" value-name:"<ws|wss>://ADDR[:PORT]" default:"ws://127.0.0.1:9944"`
+	Listen              string `long:"listen" description:"Listen address" value-name:"[ADDR]:PORT" default:":49944"`
+	NodeWsEndpoint      string `long:"ws-endpoint" description:"Node websocket endpoint" value-name:"<ws|wss>://ADDR[:PORT]" default:"ws://127.0.0.1:9944"`
+	ProbeTimeoutSeconds uint32 `short:"t" long:"timeout" description:"Probe timeout in seconds" value-name:"n" default:"1"`
+	LogLevel            uint32 `long:"log-level" description:"The log level (0 ~ 6)" value-name:"n" default:"4"`
 }
 
 var (
@@ -24,31 +26,50 @@ var (
 	buildDate    = "unknown"
 )
 
-func sendWsRequest(conn *ws.Conn, w http.ResponseWriter, data []byte) *rpc.JsonRpcResult {
+type ProbeRequest struct {
+	Name    string
+	Request []byte
+}
+
+var probeRequests []ProbeRequest
+
+func init() {
+	probeRequests = []ProbeRequest{
+		{
+			Name:    "system_health",
+			Request: rpc.SystemHealth(0),
+		},
+		{
+			Name:    "system_health",
+			Request: rpc.SystemChain(0),
+		},
+		{
+			Name:    "system_properties",
+			Request: rpc.SystemProperties(0),
+		},
+		{
+			Name:    "chain_getBlockHash",
+			Request: rpc.ChainGetBlockHash(0, 0),
+		},
+	}
+}
+
+func sendWsRequest(conn *ws.Conn, data []byte) (*rpc.JsonRpcResult, error) {
 	v := &rpc.JsonRpcResult{}
 
 	if err := conn.WriteMessage(ws.TextMessage, data); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		err = fmt.Errorf("conn.WriteMessage: %w", err)
-		log.WithError(err).Error()
-		return nil
+		return nil, fmt.Errorf("conn.WriteMessage: %w", err)
 	}
 
 	if err := conn.ReadJSON(v); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		err = fmt.Errorf("conn.ReadJSON: %w", err)
-		log.WithError(err).Error()
-		return nil
+		return nil, fmt.Errorf("conn.ReadJSON: %w", err)
 	}
 
 	if v.Error != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		err := fmt.Errorf("Websocket returned an error: %s", v.Error.Message)
-		log.WithError(err).Error()
-		return nil
+		return nil, fmt.Errorf("Websocket returned an error: %s", v.Error.Message)
 	}
 
-	return v
+	return v, nil
 }
 
 func main() {
@@ -58,29 +79,40 @@ func main() {
 
 	fmt.Printf("Substrate Node Livness Probe %v-%v (built %v)\n", buildVersion, buildCommit, buildDate)
 
-	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		var conn *ws.Conn
-		var err error
+	log.SetLevel(log.Level(opts.LogLevel))
 
-		dialer := ws.Dialer{HandshakeTimeout: 2 * time.Second}
-		if conn, _, err = dialer.Dial(opts.NodeWsEndpoint, nil); err != nil {
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		log.Debugf("Received probe request from %s %s", r.RemoteAddr, r.Header.Get("User-Agent"))
+
+		dialer := ws.Dialer{
+			HandshakeTimeout: time.Duration(opts.ProbeTimeoutSeconds) * time.Second,
+		}
+
+		conn, _, err := dialer.Dial(opts.NodeWsEndpoint, nil)
+
+		if conn != nil {
+			defer conn.Close()
+		}
+
+		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			err = fmt.Errorf("Dial: %w", err)
 			log.WithError(err).Error()
 			return
 		}
 
-		v := sendWsRequest(conn, w, rpc.SystemHealth(0))
-		log.Infof("RPC call system_health succeeded: %s", v.Result)
+		for _, p := range probeRequests {
+			if r, err := sendWsRequest(conn, p.Request); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				log.WithError(err).Error()
+			} else {
+				log.Debugf("RPC %s result: %s", p.Name, r.Result)
+			}
+		}
 
-		v = sendWsRequest(conn, w, rpc.SystemChain(0))
-		log.Infof("RPC call system_chain succeeded: %s", v.Result)
-
-		v = sendWsRequest(conn, w, rpc.SystemProperties(0))
-		log.Infof("RPC call system_properties succeeded: %s", v.Result)
-
-		v = sendWsRequest(conn, w, rpc.ChainGetBlockHash(0, 0))
-		log.Infof("RPC call chain_getBlockHash succeeded: %s", v.Result)
+		elapsed := time.Since(start)
+		log.Infof("Probe succeeded, time elapsed %s", elapsed)
 
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
