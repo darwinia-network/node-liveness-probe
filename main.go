@@ -106,6 +106,7 @@ func main() {
 			if r, err := sendWsRequest(conn, p.Request); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				log.WithError(err).Error()
+				return
 			} else {
 				log.Debugf("RPC %s result: %s", p.Name, r.Result)
 			}
