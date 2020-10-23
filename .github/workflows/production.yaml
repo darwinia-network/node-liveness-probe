@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        run: |
+      - run: |
           TAG=$(git describe --tags --abbrev=0 HEAD)
           LAST_TAG=$(git describe --tags --abbrev=0 HEAD^)
           RELEASE_NOTES=$(git log "$LAST_TAG..HEAD" --oneline --decorate)
