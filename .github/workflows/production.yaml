@@ -9,8 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - env:
-
         run: |
           TAG=$(git describe --tags --abbrev=0 HEAD)
           LAST_TAG=$(git describe --tags --abbrev=0 HEAD^)
