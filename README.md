@@ -55,3 +55,7 @@ docker run --rm -it quay.io/darwinia-network/node-liveness-probe:VERSION --help
 ## Special Thanks
 
 - <https://github.com/kubernetes-csi/livenessprobe>
+
+## License
+
+MIT
