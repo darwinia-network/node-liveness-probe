@@ -42,7 +42,7 @@ func (h ProbeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	elapsed := time.Since(start)
-	log.Infof("Probe done, time elapsed %s", elapsed)
+	log.Infof("Probe %s returning %d in %s", r.URL.Path, statusCode, elapsed)
 
 	w.WriteHeader(statusCode)
 	if statusCode == http.StatusOK {
