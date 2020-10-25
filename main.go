@@ -14,7 +14,7 @@ var opts struct {
 	Listen              string `long:"listen" description:"Listen address" value-name:"[ADDR]:PORT" default:":49944"`
 	NodeWsEndpoint      string `long:"ws-endpoint" description:"Node websocket endpoint" value-name:"<ws|wss>://ADDR[:PORT]" default:"ws://127.0.0.1:9944"`
 	ProbeTimeoutSeconds uint32 `short:"t" long:"timeout" description:"Probe timeout in seconds" value-name:"n" default:"1"`
-	LogLevel            uint32 `long:"log-level" description:"The log level (0 ~ 6)" value-name:"n" default:"4"`
+	LogLevel            uint32 `long:"log-level" description:"The log level (0 ~ 6), use 5 for debugging, see https://pkg.go.dev/github.com/sirupsen/logrus#Level" value-name:"n" default:"4"`
 }
 
 var (

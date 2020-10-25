@@ -3,9 +3,9 @@
 ![](https://img.shields.io/github/workflow/status/darwinia-network/node-liveness-probe/Production)
 ![](https://img.shields.io/github/v/release/darwinia-network/node-liveness-probe)
 
-The node liveness probe is a sidecar container that exposes an HTTP `/healthz` endpoint, which calls several RPC methods via a WebSocket connection to check and serves as kubelet's livenessProbe hook to monitor health of a Darwinia node.
+The node-liveness-probe is a sidecar container that exposes an HTTP `/healthz` endpoint, which serves as kubelet's livenessProbe hook to monitor health of a Darwinia node.
 
-It also experimentally provides a readiness probe endpoint `/readiness`, which reports if the node is ready to handle RPC requests by determining if the syncing progress is done.
+It also experimentally provides a readiness probe endpoint `/readiness`, which reports if the node is ready to handle RPC requests, by determining if the syncing progress is done.
 
 ## Releases
 
@@ -52,7 +52,7 @@ spec:
     # ...
 ```
 
-Notice that the actual `livenessProbe` field is set on the node container. This way, Kubernetes restarts darwinia node instead of node-liveness-probe when the probe fails. The liveness probe sidecar container only provides the HTTP endpoint for the probe and does not contain livenessProbe section by itself.
+Notice that the actual `livenessProbe` field is set on the node container. This way, Kubernetes restarts Darwinia node instead of node-liveness-probe when the probe fails. The liveness probe sidecar container only provides the HTTP endpoint for the probe and does not contain a `livenessProbe` section by itself.
 
 It is recommended to increase the option `--timeout` and Pod spec `.containers.*.livenessProbe.timeoutSeconds` a bit (e.g. 3 seconds), if you have a heavy load on your node, since the probe process involves multiple RPC calls.
 
@@ -64,9 +64,13 @@ To get the full list of configurable options, please use `--help`:
 docker run --rm -it quay.io/darwinia-network/node-liveness-probe:VERSION --help
 ```
 
+## How it Works
+
+When receives HTTP connections from `/healthz`, the node-liveness-probe tries to connect the node through WebSocket, then calls [several RPC methods](https://github.com/darwinia-network/node-liveness-probe/blob/master/probes/liveness_probe.go#L22) sequentially via the connection to check health of the node. If these requests all succeeded, it generates a `200` response. Otherwise, if there's any error including connection refused, RPC timed out, or JSON RPC error, it responds with HTTP `5xx`.
+
 ## Compatibility
 
-The node liveness probe should be compatible with nodes of other Substrate-based chains, such as Polkadot and Kusama, although that hasn't been well tested. Please consider submitting an issue if you're experiencing any problem with these nodes to help us improve the compatibilities.
+The node liveness probe should be compatible with nodes of other Substrate-based chains, such as Polkadot and Kusama, although it hasn't been well tested. Please consider submitting an issue if you're experiencing any problems with these nodes to help us improve compatibility.
 
 ## Special Thanks
 
