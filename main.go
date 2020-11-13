@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/darwinia-network/node-liveness-probe/handlers"
 	"github.com/darwinia-network/node-liveness-probe/probes"
 	flags "github.com/jessevdk/go-flags"
 	log "github.com/sirupsen/logrus"
@@ -32,16 +33,19 @@ func main() {
 
 	log.SetLevel(log.Level(opts.LogLevel))
 
-	http.Handle("/healthz", &ProbeHandler{
-		Prober: &probes.LivenessProbe{},
+	http.Handle("/healthz", &handlers.ProbeHandler{
+		Prober:     &probes.LivenessProbe{},
+		WsEndpoint: opts.NodeWsEndpoint,
 	})
-	http.Handle("/healthz_block", &ProbeHandler{
-		Prober: &probes.LivenessBlockProbe{BlockThresholdSeconds: opts.BlockThresholdSeconds},
+	http.Handle("/healthz_block", &handlers.ProbeHandler{
+		Prober:     &probes.LivenessBlockProbe{BlockThresholdSeconds: opts.BlockThresholdSeconds},
+		WsEndpoint: opts.NodeWsEndpoint,
 	})
-	http.Handle("/readiness", &ProbeHandler{
-		Prober: &probes.ReadinessProbe{},
+	http.Handle("/readiness", &handlers.ProbeHandler{
+		Prober:     &probes.ReadinessProbe{},
+		WsEndpoint: opts.NodeWsEndpoint,
 	})
 
-	log.Infof("Serving requests to /healthz and /readiness on %s", opts.Listen)
+	log.Infof("Serving requests on %s", opts.Listen)
 	log.Fatal(http.ListenAndServe(opts.Listen, nil))
 }

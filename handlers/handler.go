@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ type Prober interface {
 type ProbeHandler struct {
 	Prober
 
-	wsHandshakeTimeout time.Duration
+	WsEndpoint string
 }
 
 func (h *ProbeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -25,12 +25,12 @@ func (h *ProbeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	log.Debugf("Received request %s from %s %s", r.URL.Path, r.RemoteAddr, r.Header.Get("User-Agent"))
 
-	err := h.parseTimeoutFromQuery(r)
+	timeout, err := h.parseTimeoutFromQuery(r)
 	if err != nil {
 		statusCode = http.StatusInternalServerError
 		err = fmt.Errorf("parseTimeoutFromQuery: %w", err)
 		log.Error(err)
-	} else if statusCode, err = h.dialAndProbe(); err != nil {
+	} else if statusCode, err = h.dialAndProbe(timeout); err != nil {
 		log.Warn(err)
 	}
 
@@ -41,14 +41,14 @@ func (h *ProbeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(http.StatusText(statusCode)))
 }
 
-func (h *ProbeHandler) dialAndProbe() (int, error) {
+func (h *ProbeHandler) dialAndProbe(wsHandshakeTimeout *time.Duration) (int, error) {
 	dialer := &ws.Dialer{
-		HandshakeTimeout: h.wsHandshakeTimeout,
+		HandshakeTimeout: *wsHandshakeTimeout,
 	}
 
 	log.Debugf("Dialer: %+v", dialer)
 
-	conn, _, err := dialer.Dial(opts.NodeWsEndpoint, nil)
+	conn, _, err := dialer.Dial(h.WsEndpoint, nil)
 
 	if conn != nil {
 		defer conn.Close()
@@ -61,7 +61,7 @@ func (h *ProbeHandler) dialAndProbe() (int, error) {
 	}
 }
 
-func (h *ProbeHandler) parseTimeoutFromQuery(r *http.Request) error {
+func (h *ProbeHandler) parseTimeoutFromQuery(r *http.Request) (*time.Duration, error) {
 	var (
 		timeoutInSecond int
 		err             error
@@ -70,10 +70,10 @@ func (h *ProbeHandler) parseTimeoutFromQuery(r *http.Request) error {
 	if t := r.URL.Query().Get("timeout"); t == "" {
 		timeoutInSecond = 1
 	} else if timeoutInSecond, err = strconv.Atoi(t); err != nil {
-		return err
+		return nil, err
 	}
 
-	h.wsHandshakeTimeout = time.Duration(timeoutInSecond) * time.Second
+	timeout := time.Duration(timeoutInSecond) * time.Second
 
-	return nil
+	return &timeout, nil
 }
