@@ -42,7 +42,7 @@ func init() {
 func (p *LivenessProbe) Probe(conn *ws.Conn) (int, error) {
 	for _, p := range livenessProbeRequests {
 		if _, err := sendWsRequest(conn, p.Name, p.Request); err != nil {
-			return http.StatusInternalServerError, err
+			return http.StatusServiceUnavailable, err
 		}
 	}
 

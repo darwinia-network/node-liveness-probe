@@ -12,7 +12,7 @@ type ReadinessProbe struct{}
 
 func (p *ReadinessProbe) Probe(conn *ws.Conn) (int, error) {
 	if ready, err := isNodeReady(conn); err != nil {
-		return http.StatusInternalServerError, err
+		return http.StatusServiceUnavailable, err
 	} else if !*ready {
 		return http.StatusServiceUnavailable, fmt.Errorf("Node is not ready")
 	}

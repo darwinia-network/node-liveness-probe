@@ -28,7 +28,7 @@ func (p *LivenessBlockProbe) Probe(conn *ws.Conn) (int, error) {
 	}
 
 	if err := p.UpdateLatestBlock(conn); err != nil {
-		return http.StatusInternalServerError, err
+		return http.StatusServiceUnavailable, err
 	}
 
 	sinceLastBlockSeconds := time.Since(p.lastBlockTime).Seconds()
@@ -39,7 +39,7 @@ func (p *LivenessBlockProbe) Probe(conn *ws.Conn) (int, error) {
 			sinceLastBlockSeconds,
 			p.BlockThresholdSeconds,
 		)
-		return http.StatusInternalServerError, err
+		return http.StatusServiceUnavailable, err
 	} else {
 		log.Debugf(
 			"The last block %d was obtained %.2f second(s) ago, below the threshold %.2f",

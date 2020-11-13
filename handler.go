@@ -38,9 +38,7 @@ func (h *ProbeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Infof("Probe %s returning %d in %s", r.URL.Path, statusCode, elapsed)
 
 	w.WriteHeader(statusCode)
-	if statusCode == http.StatusOK {
-		w.Write([]byte("OK"))
-	}
+	w.Write([]byte(http.StatusText(statusCode)))
 }
 
 func (h *ProbeHandler) dialAndProbe() (int, error) {
@@ -57,7 +55,7 @@ func (h *ProbeHandler) dialAndProbe() (int, error) {
 	}
 
 	if err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("Dial: %w", err)
+		return http.StatusServiceUnavailable, fmt.Errorf("Dial: %w", err)
 	} else {
 		return h.Prober.Probe(conn)
 	}
