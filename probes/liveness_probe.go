@@ -39,19 +39,17 @@ func init() {
 	}
 }
 
-func (p LivenessProbe) Probe(conn *ws.Conn) (error, int) {
+func (p *LivenessProbe) Probe(conn *ws.Conn) (error, int) {
 	for _, p := range livenessProbeRequests {
-		if r, err := sendWsRequest(conn, p.Request); err != nil {
+		if _, err := sendWsRequest(conn, p.Name, p.Request); err != nil {
 			return err, http.StatusInternalServerError
-		} else {
-			log.Debugf("RPC %s result: %+v", p.Name, r.Result)
 		}
 	}
 
 	return nil, http.StatusOK
 }
 
-func sendWsRequest(conn *ws.Conn, data []byte) (*rpc.JsonRpcResult, error) {
+func sendWsRequest(conn *ws.Conn, name string, data []byte) (*rpc.JsonRpcResult, error) {
 	v := &rpc.JsonRpcResult{}
 
 	if err := conn.WriteMessage(ws.TextMessage, data); err != nil {
@@ -63,8 +61,9 @@ func sendWsRequest(conn *ws.Conn, data []byte) (*rpc.JsonRpcResult, error) {
 	}
 
 	if v.Error != nil {
-		return nil, fmt.Errorf("RPC error: %s", v.Error.Message)
+		return nil, fmt.Errorf("RPC %s error: %s", name, v.Error.Message)
 	}
 
+	log.Debugf("RPC %s result: %+v", name, v.Result)
 	return v, nil
 }
