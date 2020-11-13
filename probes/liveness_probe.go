@@ -25,7 +25,7 @@ func init() {
 			Request: rpc.SystemHealth(0),
 		},
 		{
-			Name:    "system_health",
+			Name:    "system_chain",
 			Request: rpc.SystemChain(0),
 		},
 		{
