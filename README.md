@@ -3,17 +3,27 @@
 ![](https://img.shields.io/github/workflow/status/darwinia-network/node-liveness-probe/Production)
 ![](https://img.shields.io/github/v/release/darwinia-network/node-liveness-probe)
 
-The node-liveness-probe is a sidecar container that exposes an HTTP `/healthz` endpoint, which serves as kubelet's livenessProbe hook to monitor health of a Darwinia node.
+The node-liveness-probe is a sidecar container that exposes an HTTP `/healthz` endpoint, which serves as kubelet's livenessProbe hook to monitor health of a Darwinia (or any Substrate-RPC-compatible) node.
 
 It also experimentally provides a readiness probe endpoint `/readiness`, which reports if the node is ready to handle RPC requests, by determining if the syncing progress is done.
 
 ## Releases
+
+Until `v1` released, node-liveness-probe is still under development, any API or CLI options may be changed in future versions.
 
 The releases are under [GitHub's release page](https://github.com/darwinia-network/node-liveness-probe/releases). You can pull the image by using one of the versions, for example:
 
 ```bash
 docker pull quay.io/darwinia-network/node-liveness-probe:v0.1.0
 ```
+
+## HTTP Endpoints
+
+- `/healthz` checks node health status by sending a sequence of JSON RPC requests. An HTTP `200` or `5xx` response should be returned, signifying node is healthy or not. See [How it Works](#how-it-works).
+
+- `/healthz_block` also checks node health. Additionally, it checks if the latest block of node is outdated. The threshold can be configured using the CLI option `--block-threshold-seconds`.
+
+- `/readiness` checks if node is still in syncing. This can be used with ReadinessProbe, to make sure RPC requests to a Service will only be served by nodes that have followed up.
 
 ## Usage
 
@@ -33,7 +43,7 @@ spec:
     # The liveness probe
     livenessProbe:
       httpGet:
-        path: /healthz
+        path: /healthz # Or /healthz_block
         port: healthz
       initialDelaySeconds: 60
       timeoutSeconds: 3
