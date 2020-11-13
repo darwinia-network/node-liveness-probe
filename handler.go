@@ -11,7 +11,7 @@ import (
 )
 
 type Prober interface {
-	Probe(*ws.Conn) (error, int)
+	Probe(*ws.Conn) (int, error)
 }
 
 type ProbeHandler struct {
@@ -56,13 +56,10 @@ func (h *ProbeHandler) dialAndProbe() (int, error) {
 		defer conn.Close()
 	}
 
-	var statusCode int
-
 	if err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("Dial: %w", err)
 	} else {
-		err, statusCode = h.Prober.Probe(conn)
-		return statusCode, err
+		return h.Prober.Probe(conn)
 	}
 }
 

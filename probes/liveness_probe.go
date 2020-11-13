@@ -39,14 +39,14 @@ func init() {
 	}
 }
 
-func (p *LivenessProbe) Probe(conn *ws.Conn) (error, int) {
+func (p *LivenessProbe) Probe(conn *ws.Conn) (int, error) {
 	for _, p := range livenessProbeRequests {
 		if _, err := sendWsRequest(conn, p.Name, p.Request); err != nil {
-			return err, http.StatusInternalServerError
+			return http.StatusInternalServerError, err
 		}
 	}
 
-	return nil, http.StatusOK
+	return http.StatusOK, nil
 }
 
 func sendWsRequest(conn *ws.Conn, name string, data []byte) (*rpc.JsonRpcResult, error) {

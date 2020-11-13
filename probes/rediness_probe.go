@@ -10,14 +10,14 @@ import (
 
 type ReadinessProbe struct{}
 
-func (p *ReadinessProbe) Probe(conn *ws.Conn) (error, int) {
+func (p *ReadinessProbe) Probe(conn *ws.Conn) (int, error) {
 	if ready, err := isNodeReady(conn); err != nil {
-		return err, http.StatusInternalServerError
+		return http.StatusInternalServerError, err
 	} else if !*ready {
-		return fmt.Errorf("Node is not ready"), http.StatusServiceUnavailable
+		return http.StatusServiceUnavailable, fmt.Errorf("Node is not ready")
 	}
 
-	return nil, http.StatusOK
+	return http.StatusOK, nil
 }
 
 func isNodeReady(conn *ws.Conn) (*bool, error) {

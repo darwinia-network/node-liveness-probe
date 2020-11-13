@@ -21,14 +21,14 @@ type LivenessBlockProbe struct {
 	BlockThresholdSeconds float64
 }
 
-func (p *LivenessBlockProbe) Probe(conn *ws.Conn) (error, int) {
-	livenessProbeErr, livenessProbeStatusCode := p.LivenessProbe.Probe(conn)
+func (p *LivenessBlockProbe) Probe(conn *ws.Conn) (int, error) {
+	livenessProbeStatusCode, livenessProbeErr := p.LivenessProbe.Probe(conn)
 	if livenessProbeErr != nil {
-		return livenessProbeErr, livenessProbeStatusCode
+		return livenessProbeStatusCode, livenessProbeErr
 	}
 
 	if err := p.UpdateLatestBlock(conn); err != nil {
-		return err, http.StatusInternalServerError
+		return http.StatusInternalServerError, err
 	}
 
 	sinceLastBlockSeconds := time.Since(p.lastBlockTime).Seconds()
@@ -39,7 +39,7 @@ func (p *LivenessBlockProbe) Probe(conn *ws.Conn) (error, int) {
 			sinceLastBlockSeconds,
 			p.BlockThresholdSeconds,
 		)
-		return err, http.StatusInternalServerError
+		return http.StatusInternalServerError, err
 	} else {
 		log.Debugf(
 			"The last block %d was obtained %.2f second(s) ago, below the threshold %.2f",
@@ -50,7 +50,7 @@ func (p *LivenessBlockProbe) Probe(conn *ws.Conn) (error, int) {
 	}
 
 	// Inherit
-	return livenessProbeErr, livenessProbeStatusCode
+	return livenessProbeStatusCode, livenessProbeErr
 }
 
 func rpcChainGetLatestBlock(id int) []byte {
