@@ -57,14 +57,12 @@ spec:
   # The liveness probe sidecar container
   - name: liveness-probe
     image: quay.io/darwinia-network/node-liveness-probe:VERSION
-    args:
-      - --timeout=3
     # ...
 ```
 
 Notice that the actual `livenessProbe` field is set on the node container. This way, Kubernetes restarts Darwinia node instead of node-liveness-probe when the probe fails. The liveness probe sidecar container only provides the HTTP endpoint for the probe and does not contain a `livenessProbe` section by itself.
 
-It is recommended to increase the option `--timeout` and Pod spec `.containers.*.livenessProbe.timeoutSeconds` a bit (e.g. 3 seconds), if you have a heavy load on your node, since the probe process involves multiple RPC calls.
+It is recommended to increase the Pod spec `.containers.*.livenessProbe.timeoutSeconds` a bit (e.g. 3 seconds), if you have a heavy load on your node, since the probe process involves multiple RPC calls.
 
 ## Configuration
 
