@@ -21,7 +21,7 @@ docker pull quay.io/darwinia-network/node-liveness-probe:v0.1.0
 
 - `/healthz` checks node health status by sending a sequence of JSON RPC requests. An HTTP `200` or `5xx` response should be returned, signifying node is healthy or not. See [How it Works](#how-it-works).
 
-- `/healthz_block` also checks node health. Additionally, it checks if the latest block of node is outdated. The threshold can be configured using the CLI option `--block-threshold-seconds`.
+- `/healthz_block` also checks node health. Additionally, it checks if the latest and the finalized block of node are (potentially) stale. The threshold can be configured using the CLI option `--block-threshold-seconds`.
 
 - `/readiness` checks if node is still in syncing. This can be used with ReadinessProbe, to make sure RPC requests to a Service will only be served by nodes that have followed up.
 
