@@ -50,6 +50,7 @@ func (p *LivenessProbe) Probe(conn *ws.Conn) (int, error) {
 }
 
 func sendWsRequest(conn *ws.Conn, name string, data []byte) (*rpc.JsonRpcResult, error) {
+	log.Tracef("sendWsRequest: %s", data)
 	v := &rpc.JsonRpcResult{}
 
 	if err := conn.WriteMessage(ws.TextMessage, data); err != nil {
