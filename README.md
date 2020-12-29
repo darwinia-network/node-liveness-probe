@@ -78,7 +78,7 @@ When receives HTTP connections from `/healthz`, the node-liveness-probe tries to
 
 ## Compatibility
 
-The node liveness probe should be compatible with nodes of other Substrate-based chains, such as Polkadot and Kusama, although it hasn't been well tested. Please consider submitting an issue if you're experiencing any problems with these nodes to help us improve compatibility.
+The node liveness probe works with Darwinia nodes. It should be compatible with nodes of other Substrate-based chains too. We currently operates several chain node (e.g. Polkadot, Kusama, Kulupu, and Edgeware) as the infrastructure of [subscan.io](https://subscan.io) with node liveness probe. Please consider submitting an issue if you're experiencing any problems with these nodes to help us improve compatibility.
 
 ## Special Thanks
 
