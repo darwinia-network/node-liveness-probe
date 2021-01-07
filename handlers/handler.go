@@ -7,7 +7,7 @@ import (
 	"time"
 
 	ws "github.com/gorilla/websocket"
-	log "github.com/sirupsen/logrus"
+	"k8s.io/klog/v2"
 )
 
 type Prober interface {
@@ -23,19 +23,19 @@ type ProbeHandler struct {
 func (h *ProbeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var statusCode int
 	start := time.Now()
-	log.Debugf("Received request %s from %s %s", r.URL.Path, r.RemoteAddr, r.Header.Get("User-Agent"))
+	klog.V(4).Infof("Received request %s from %s %s", r.URL.Path, r.RemoteAddr, r.Header.Get("User-Agent"))
 
 	timeout, err := h.parseTimeoutFromQuery(r)
 	if err != nil {
 		statusCode = http.StatusInternalServerError
 		err = fmt.Errorf("parseTimeoutFromQuery: %w", err)
-		log.Error(err)
+		klog.Error(err)
 	} else if statusCode, err = h.dialAndProbe(timeout); err != nil {
-		log.Warn(err)
+		klog.Warning(err)
 	}
 
 	elapsed := time.Since(start)
-	log.Infof("Probe %s returning %d in %s", r.URL.Path, statusCode, elapsed)
+	klog.Infof("Probe %s returning %d in %s", r.URL.Path, statusCode, elapsed)
 
 	w.WriteHeader(statusCode)
 	w.Write([]byte(http.StatusText(statusCode)))
@@ -46,7 +46,7 @@ func (h *ProbeHandler) dialAndProbe(wsHandshakeTimeout *time.Duration) (int, err
 		HandshakeTimeout: *wsHandshakeTimeout,
 	}
 
-	log.Debugf("Dialer: %+v", dialer)
+	klog.V(5).Infof("Dialer: %+v", dialer)
 
 	conn, _, err := dialer.Dial(h.WsEndpoint, nil)
 

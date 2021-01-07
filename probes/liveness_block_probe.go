@@ -8,7 +8,7 @@ import (
 
 	ws "github.com/gorilla/websocket"
 	"github.com/itering/substrate-api-rpc/rpc"
-	log "github.com/sirupsen/logrus"
+	"k8s.io/klog/v2"
 )
 
 type LivenessBlockProbe struct {
@@ -37,7 +37,7 @@ func (b *Block) IsStale(thresholdSeconds float64, status string) error {
 			thresholdSeconds,
 		)
 	} else {
-		log.Debugf(
+		klog.V(2).Infof(
 			"The %s block %d was obtained %.2f second(s) ago, below the threshold %.2f",
 			status,
 			b.Number,
@@ -58,7 +58,7 @@ func (p *LivenessBlockProbe) Probe(conn *ws.Conn) (int, error) {
 		return http.StatusServiceUnavailable, err
 	}
 
-	log.Infof("Retrieved block, best: #%d, finalized: #%d", p.bestBlock.Number, p.finalizedBlock.Number)
+	klog.Infof("Retrieved block, best: #%d, finalized: #%d", p.bestBlock.Number, p.finalizedBlock.Number)
 
 	errBestBlock := p.bestBlock.IsStale(p.BlockThresholdSeconds, "best")
 	errFinalizedBlock := p.finalizedBlock.IsStale(p.BlockThresholdSeconds, "finalized")

@@ -1,22 +1,13 @@
 package main
 
 import (
-	"fmt"
+	"flag"
 	"net/http"
-	"os"
 
 	"github.com/darwinia-network/node-liveness-probe/handlers"
 	"github.com/darwinia-network/node-liveness-probe/probes"
-	flags "github.com/jessevdk/go-flags"
-	log "github.com/sirupsen/logrus"
+	"k8s.io/klog/v2"
 )
-
-var opts struct {
-	Listen                string  `long:"listen" description:"Listen address" value-name:"[ADDR]:PORT" default:":49944"`
-	NodeWsEndpoint        string  `long:"ws-endpoint" description:"Node websocket endpoint" value-name:"<ws|wss>://ADDR[:PORT]" default:"ws://127.0.0.1:9944"`
-	LogLevel              uint32  `long:"log-level" description:"The log level (0 ~ 6), use 5 for debugging, see https://pkg.go.dev/github.com/sirupsen/logrus#Level" value-name:"N" default:"4"`
-	BlockThresholdSeconds float64 `long:"block-threshold-seconds" description:"/healthz_block returns unhealthy if node's latest block is older than threshold" value-name:"N" default:"120"`
-}
 
 var (
 	buildVersion = "dev"
@@ -24,28 +15,35 @@ var (
 	buildDate    = "unknown"
 )
 
+var (
+	listen                = flag.String("listen", ":49944", "Listen address")
+	wsEndpoint            = flag.String("ws-endpoint", "ws://127.0.0.1:9944", "Substrate node WebSocket endpoint")
+	blockThresholdSeconds = flag.Float64("block-threshold-seconds", 120, "/healthz_block returns unhealthy if node's latest block is older than threshold")
+)
+
 func main() {
-	if _, err := flags.Parse(&opts); err != nil {
-		os.Exit(0)
-	}
+	klog.InitFlags(nil)
+	flag.Set("logtostderr", "true")
+	flag.Parse()
 
-	fmt.Printf("Substrate Node Livness Probe %v-%v (built %v)\n", buildVersion, buildCommit, buildDate)
-
-	log.SetLevel(log.Level(opts.LogLevel))
+	klog.Infof("Substrate Node Livness Probe %v-%v (built %v)\n", buildVersion, buildCommit, buildDate)
 
 	http.Handle("/healthz", &handlers.ProbeHandler{
 		Prober:     &probes.LivenessProbe{},
-		WsEndpoint: opts.NodeWsEndpoint,
+		WsEndpoint: *wsEndpoint,
 	})
 	http.Handle("/healthz_block", &handlers.ProbeHandler{
-		Prober:     &probes.LivenessBlockProbe{BlockThresholdSeconds: opts.BlockThresholdSeconds},
-		WsEndpoint: opts.NodeWsEndpoint,
+		Prober:     &probes.LivenessBlockProbe{BlockThresholdSeconds: *blockThresholdSeconds},
+		WsEndpoint: *wsEndpoint,
 	})
 	http.Handle("/readiness", &handlers.ProbeHandler{
 		Prober:     &probes.ReadinessProbe{},
-		WsEndpoint: opts.NodeWsEndpoint,
+		WsEndpoint: *wsEndpoint,
 	})
 
-	log.Infof("Serving requests on %s", opts.Listen)
-	log.Fatal(http.ListenAndServe(opts.Listen, nil))
+	klog.Infof("Serving requests on %s", *listen)
+	err := http.ListenAndServe(*listen, nil)
+	if err != nil {
+		klog.Fatalf("failed to start http server with error: %v", err)
+	}
 }

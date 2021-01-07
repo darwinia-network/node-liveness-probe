@@ -6,7 +6,7 @@ import (
 
 	ws "github.com/gorilla/websocket"
 	"github.com/itering/substrate-api-rpc/rpc"
-	log "github.com/sirupsen/logrus"
+	"k8s.io/klog/v2"
 )
 
 type LivenessProbe struct{}
@@ -50,7 +50,7 @@ func (p *LivenessProbe) Probe(conn *ws.Conn) (int, error) {
 }
 
 func sendWsRequest(conn *ws.Conn, name string, data []byte) (*rpc.JsonRpcResult, error) {
-	log.Tracef("sendWsRequest: %s", data)
+	klog.V(5).Infof("sendWsRequest: %s", data)
 	v := &rpc.JsonRpcResult{}
 
 	if err := conn.WriteMessage(ws.TextMessage, data); err != nil {
@@ -65,6 +65,6 @@ func sendWsRequest(conn *ws.Conn, name string, data []byte) (*rpc.JsonRpcResult,
 		return nil, fmt.Errorf("RPC %s error: %s", name, v.Error.Message)
 	}
 
-	log.Debugf("RPC %s result: %+v", name, v.Result)
+	klog.V(4).Infof("RPC %s result: %+v", name, v.Result)
 	return v, nil
 }
