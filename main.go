@@ -18,7 +18,7 @@ var (
 var (
 	listen                = flag.String("listen", ":49944", "Listen address")
 	wsEndpoint            = flag.String("ws-endpoint", "ws://127.0.0.1:9944", "Substrate node WebSocket endpoint")
-	blockThresholdSeconds = flag.Float64("block-threshold-seconds", 120, "/healthz_block returns unhealthy if node's latest block is older than threshold")
+	blockThresholdSeconds = flag.Float64("block-threshold-seconds", 300, "/healthz_block returns unhealthy if node's latest block is older than threshold")
 )
 
 func main() {
