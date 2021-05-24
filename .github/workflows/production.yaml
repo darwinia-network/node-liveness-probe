@@ -43,7 +43,5 @@ jobs:
 
       - uses: ./.github/actions/docker-build-deploy
         with:
-          deploy_phase: production
+          skip_deploy: true
           docker_registry: quay.io
-          trigger_token: ${{ secrets.ITERING_DEPLOYMENT_TRIGGER_TOKEN }}
-          trigger_endpoint: ${{ secrets.ITERING_DEPLOYMENT_TRIGGER_ENDPOINT }}
