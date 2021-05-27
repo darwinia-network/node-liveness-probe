@@ -37,6 +37,7 @@ func (h *ProbeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	elapsed := time.Since(start)
 	klog.Infof("Probe %s returning %d in %s", r.URL.Path, statusCode, elapsed)
 
+	w.Header().Set("Cache-Control", "no-cache")
 	w.WriteHeader(statusCode)
 	w.Write([]byte(http.StatusText(statusCode)))
 }
