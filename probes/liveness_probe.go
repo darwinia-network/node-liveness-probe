@@ -50,21 +50,21 @@ func (p *LivenessProbe) Probe(conn *ws.Conn) (int, error) {
 }
 
 func sendWsRequest(conn *ws.Conn, name string, data []byte) (*rpc.JsonRpcResult, error) {
-	klog.V(5).Infof("sendWsRequest: %s", data)
+	klog.V(5).Infof("sendWsRequest (%s): %s", name, data)
 	v := &rpc.JsonRpcResult{}
 
 	if err := conn.WriteMessage(ws.TextMessage, data); err != nil {
-		return nil, fmt.Errorf("conn.WriteMessage: %w", err)
+		return nil, fmt.Errorf("conn.WriteMessage (%s): %w", name, err)
 	}
 
 	if err := conn.ReadJSON(v); err != nil {
-		return nil, fmt.Errorf("conn.ReadJSON: %w", err)
+		return nil, fmt.Errorf("conn.ReadJSON (%s): %w", name, err)
 	}
 
 	if v.Error != nil {
-		return nil, fmt.Errorf("RPC %s error: %s", name, v.Error.Message)
+		return nil, fmt.Errorf("RPC error (%s): %s", name, v.Error.Message)
 	}
 
-	klog.V(4).Infof("RPC %s result: %+v", name, v.Result)
+	klog.V(4).Infof("RPC result (%s): %+v", name, v.Result)
 	return v, nil
 }
