@@ -25,14 +25,19 @@ docker pull quay.io/darwinia-network/node-liveness-probe:v0.1.0
 
 - `/readiness` checks if node is still in syncing. This can be used with ReadinessProbe, to make sure RPC requests to a Service will only be served by nodes that have followed up.
 
+## Example
+
+See the full manifests in Kubevali: <https://github.com/darwinia-network/kubevali/blob/master/deploy/manifests/statefulset.yaml>.
+
 ## Usage
 
 ```yaml
 kind: Pod
 spec:
   containers:
-
+  ##
   # The node container
+  ##
   - name: darwinia
     image: darwinianetwork/darwinia:NODE_VERSION
     # Defining port which will be used to GET plugin health status
@@ -54,7 +59,9 @@ spec:
         port: healthz
     # ...
 
+  ##
   # The liveness probe sidecar container
+  ##
   - name: liveness-probe
     image: quay.io/darwinia-network/node-liveness-probe:VERSION
     # ...
