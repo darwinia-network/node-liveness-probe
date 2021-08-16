@@ -39,7 +39,7 @@ spec:
   # The node container
   ##
   - name: darwinia
-    image: darwinianetwork/darwinia:NODE_VERSION
+    image: quay.io/darwinia-network/darwinia:NODE_VERSION
     # Defining port which will be used to GET plugin health status
     # 49944 is default, but can be changed.
     ports:
