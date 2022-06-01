@@ -17,7 +17,7 @@ type Prober interface {
 type ProbeHandler struct {
 	Prober
 
-	WsEndpoint string
+	WsEndpoints []string
 }
 
 func (h *ProbeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +30,7 @@ func (h *ProbeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		statusCode = http.StatusInternalServerError
 		err = fmt.Errorf("parseTimeoutFromQuery: %w", err)
 		klog.Error(err)
-	} else if statusCode, err = h.dialAndProbe(timeout); err != nil {
+	} else if statusCode, err = h.dialAndProbeAll(*timeout); err != nil {
 		klog.Warning(err)
 	}
 
@@ -42,14 +42,28 @@ func (h *ProbeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(http.StatusText(statusCode)))
 }
 
-func (h *ProbeHandler) dialAndProbe(wsHandshakeTimeout *time.Duration) (int, error) {
-	dialer := &ws.Dialer{
-		HandshakeTimeout: *wsHandshakeTimeout,
+func (h *ProbeHandler) dialAndProbeAll(timeout time.Duration) (int, error) {
+	deadline := time.Now().Add(timeout)
+
+	var (
+		statusCode int
+		err        error
+	)
+
+	for _, ep := range h.WsEndpoints {
+		if statusCode, err = h.dialAndProbe(ep, timeout, deadline); err != nil {
+			return statusCode, err
+		}
 	}
 
-	klog.V(5).Infof("Dialer: %+v", dialer)
+	return statusCode, nil
+}
 
-	conn, _, err := dialer.Dial(h.WsEndpoint, nil)
+func (h *ProbeHandler) dialAndProbe(endpoint string, timeout time.Duration, deadline time.Time) (int, error) {
+	dialer := &ws.Dialer{
+		HandshakeTimeout: timeout,
+	}
+	conn, _, err := dialer.Dial(endpoint, nil)
 
 	if conn != nil {
 		defer conn.Close()
@@ -57,9 +71,12 @@ func (h *ProbeHandler) dialAndProbe(wsHandshakeTimeout *time.Duration) (int, err
 
 	if err != nil {
 		return http.StatusServiceUnavailable, fmt.Errorf("Dial: %w", err)
-	} else {
-		return h.Prober.Probe(conn)
 	}
+
+	conn.SetReadDeadline(deadline)
+	conn.SetWriteDeadline(deadline)
+
+	return h.Prober.Probe(conn)
 }
 
 func (h *ProbeHandler) parseTimeoutFromQuery(r *http.Request) (*time.Duration, error) {
