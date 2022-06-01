@@ -32,7 +32,9 @@ jobs:
           password: ${{ secrets.QUAY_IO_BOT_PASSWORD }}
           registry: quay.io
 
-      - run: |
+      - env:
+          CGO_ENABLED: 0
+        run: |
           COMMIT=$(git rev-parse --short HEAD || true)
           DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ" || true)
           TAG=$(git describe --tags --abbrev=0 HEAD || true)
@@ -40,8 +42,6 @@ jobs:
           COMMIT=${COMMIT:-NO_COMMIT}
           DATE=${DATE:-NO_DATE}
           TAG=${TAG:-NO_TAG}
-
-          CGO_ENABLED=0
 
           go get -u github.com/mitchellh/gox
           gox -verbose \
