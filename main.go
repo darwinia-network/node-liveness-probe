@@ -25,7 +25,11 @@ var (
 	buildCommit  = "none"
 	buildDate    = "unknown"
 
-	wsEndpoints           stringListValue
+	wsEndpoints                    stringListValue
+	metricsEndpoint                = flag.String("metrics-endpoint", "http://127.0.0.1:9615/metrics", "Substrate node metrics endpoint; may be specified multiple times to probe both relaychain and parachain sequentially (default \"http://127.0.0.1:9615/metrics\")")
+	useMetrics                     = flag.Bool("use-metrics", true, "Use metrics to check node's health,if useMetrics equals false, /healthz_block will use ws to check block")
+	finalizedBlockThresholdSeconds = flag.Int64("finalized-block-threshold-seconds", 300, "If the finalized block does not increase beyond this time, the node is considered unhealthy. This value is invalid if useMetrics is false.")
+
 	listen                = flag.String("listen", ":49944", "Listen address")
 	blockThresholdSeconds = flag.Float64("block-threshold-seconds", 300, "/healthz_block returns unhealthy if node's latest block is older than threshold")
 )
@@ -33,6 +37,7 @@ var (
 func initFlags() {
 	klog.InitFlags(nil)
 	flag.Var(&wsEndpoints, "ws-endpoint", "Substrate node WebSocket endpoint; may be specified multiple times to probe both relaychain and parachain sequentially (default \"ws://127.0.0.1:9944\")")
+
 	flag.Set("logtostderr", "true")
 	flag.Parse()
 	if len(wsEndpoints) == 0 {
@@ -45,8 +50,11 @@ func main() {
 	klog.Infof("Substrate Node Livness Probe %v-%v (built %v)\n", buildVersion, buildCommit, buildDate)
 
 	http.Handle("/healthz", &handlers.ProbeHandler{
-		Prober:      &probes.LivenessProbe{},
-		WsEndpoints: wsEndpoints,
+		Prober:                         &probes.LivenessProbe{},
+		WsEndpoints:                    wsEndpoints,
+		MetricsEndpoint:                *metricsEndpoint,
+		FinalizedBlockThresholdSeconds: *finalizedBlockThresholdSeconds,
+		UseMetrics:                     *useMetrics,
 	})
 	http.Handle("/healthz_block", &handlers.ProbeHandler{
 		Prober:      &probes.LivenessBlockProbe{BlockThresholdSeconds: *blockThresholdSeconds},
