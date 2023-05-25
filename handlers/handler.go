@@ -1,7 +1,10 @@
 package handlers
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -17,7 +20,82 @@ type Prober interface {
 type ProbeHandler struct {
 	Prober
 
+	MetricsEndpoint                string
+	UseMetrics                     bool
+	FinalizedBlockThresholdSeconds int64
+	metricsStartTime               time.Time
+	metricsFinalizedBlockNumber    int64
+
 	WsEndpoints []string
+}
+
+// metricsProbe probes the metrics endpoint of a liveness block
+// Returns an error if the metrics probe fails or the finalized block number
+// did not increase within FinalizedBlockThresholdSeconds
+func (p *ProbeHandler) metricsProbe() (int, error) {
+	resp, err := http.Get(p.MetricsEndpoint)
+	if err != nil {
+		return http.StatusServiceUnavailable, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return resp.StatusCode, fmt.Errorf("metrics probe failed with status code %d", resp.StatusCode)
+	}
+	var (
+		r                    = bufio.NewReader(resp.Body)
+		commentSymbol        = []byte("#")
+		finalizedSymbol      = []byte("status=\"finalized\"")
+		bestSymbol           = []byte("status=\"best\"")
+		splitSymbol          = []byte("\"} ")
+		finalizedBlockNumber int64
+		bestBlockNumber      int64
+	)
+
+	for {
+		line, _, err := r.ReadLine()
+		if err == io.EOF {
+			break
+		}
+
+		if bytes.HasPrefix(line, commentSymbol) {
+			continue
+		}
+		data := bytes.Split(line, splitSymbol)
+		if len(data) < 2 {
+			continue
+		}
+		blockNumber := Bytes2Int64(bytes.ReplaceAll(data[len(data)-1], []byte{49}, nil))
+		if blockNumber <= 0 {
+			continue
+		}
+		if bytes.Contains(line, finalizedSymbol) {
+			finalizedBlockNumber = blockNumber
+			continue
+		}
+		if bytes.Contains(line, bestSymbol) {
+			bestBlockNumber = blockNumber
+			continue
+		}
+	}
+	now := time.Now()
+	if p.metricsStartTime.IsZero() {
+		p.metricsStartTime = now
+	}
+	klog.Infof("Retrieved block, now best: #%d, now finalized: #%d, last finalized: #%d, last fetch time is %s", bestBlockNumber, finalizedBlockNumber, p.metricsFinalizedBlockNumber, p.metricsStartTime)
+	if finalizedBlockNumber <= 0 || bestBlockNumber <= 0 {
+		p.metricsStartTime = now
+		return http.StatusOK, nil
+	}
+
+	if finalizedBlockNumber == p.metricsFinalizedBlockNumber && now.Sub(p.metricsStartTime).Seconds() >= float64(p.FinalizedBlockThresholdSeconds) {
+		return http.StatusServiceUnavailable, fmt.Errorf("finalized did not increase within %dS", p.FinalizedBlockThresholdSeconds)
+	}
+
+	if finalizedBlockNumber != p.metricsFinalizedBlockNumber {
+		p.metricsFinalizedBlockNumber = finalizedBlockNumber
+		p.metricsStartTime = now
+	}
+	return resp.StatusCode, nil
 }
 
 func (h *ProbeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +114,12 @@ func (h *ProbeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	elapsed := time.Since(start)
 	klog.Infof("Probe %s returning %d in %s", r.URL.Path, statusCode, elapsed)
-
+	if statusCode == http.StatusOK && h.UseMetrics {
+		if statusCode, err = h.metricsProbe(); err != nil {
+			klog.Warning(err)
+		}
+		klog.Infof("Metrics probe %s returning %d in %s", r.URL.Path, statusCode, elapsed)
+	}
 	w.Header().Set("Cache-Control", "no-store, max-age=0")
 	w.WriteHeader(statusCode)
 	w.Write([]byte(http.StatusText(statusCode)))
@@ -94,4 +177,9 @@ func (h *ProbeHandler) parseTimeoutFromQuery(r *http.Request) (*time.Duration, e
 	timeout := time.Duration(timeoutInSecond) * time.Second
 
 	return &timeout, nil
+}
+
+func Bytes2Int64(b []byte) int64 {
+	result, _ := strconv.Atoi(string(b))
+	return int64(result)
 }
