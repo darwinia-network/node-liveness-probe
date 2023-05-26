@@ -27,7 +27,7 @@ var (
 
 	wsEndpoints                    stringListValue
 	metricsEndpoint                = flag.String("metrics-endpoint", "http://127.0.0.1:9615/metrics", "Substrate node metrics endpoint; may be specified multiple times to probe both relaychain and parachain sequentially (default \"http://127.0.0.1:9615/metrics\")")
-	useMetrics                     = flag.Bool("use-metrics", true, "Use metrics to check node's health,if useMetrics equals false, /healthz_block will use ws to check block")
+	useMetrics                     = flag.Bool("use-metrics", false, "Use metrics to check node's health,if useMetrics equals false, /healthz_block will use ws to check block")
 	finalizedBlockThresholdSeconds = flag.Int64("finalized-block-threshold-seconds", 300, "If the finalized block does not increase beyond this time, the node is considered unhealthy. This value is invalid if useMetrics is false.")
 
 	listen                = flag.String("listen", ":49944", "Listen address")
