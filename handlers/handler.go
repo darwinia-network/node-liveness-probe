@@ -64,7 +64,7 @@ func (p *ProbeHandler) metricsProbe() (int, error) {
 		if len(data) < 2 {
 			continue
 		}
-		blockNumber := Bytes2Int64(bytes.ReplaceAll(data[len(data)-1], []byte{49}, nil))
+		blockNumber := Bytes2Int64(bytes.TrimSpace(data[len(data)-1]))
 		if blockNumber <= 0 {
 			continue
 		}
